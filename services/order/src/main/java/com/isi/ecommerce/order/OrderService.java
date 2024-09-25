@@ -7,6 +7,8 @@ import com.isi.ecommerce.kafka.OrderConfirmation;
 import com.isi.ecommerce.kafka.OrderProducer;
 import com.isi.ecommerce.orderLine.OrderLineRequest;
 import com.isi.ecommerce.orderLine.OrderLineService;
+import com.isi.ecommerce.payment.PaymentClient;
+import com.isi.ecommerce.payment.PaymentRequest;
 import com.isi.ecommerce.product.ProductClient;
 import com.isi.ecommerce.product.PurchaseRequest;
 import jakarta.persistence.EntityNotFoundException;
@@ -26,6 +28,7 @@ public class OrderService {
     private final OrderMapper mapper;
     private final OrderLineService orderLineService;
     private final OrderProducer orderProducer;
+    private final PaymentClient paymentClient;
 
 
     public Integer createOrder(OrderRequest request) {
@@ -51,6 +54,14 @@ public class OrderService {
         }
 
         // todo start payment process
+        var paymentRequest = new PaymentRequest(
+                request.amount(),
+                request.paymentMethod(),
+                order.getId(),
+                order.getReference(),
+                customer
+        );
+        paymentClient.requestOrderPayment(paymentRequest);
         // send the order confirmation ---> notification-ms (kafka)
         orderProducer.sendOrderConfirmation(
                 new OrderConfirmation(
